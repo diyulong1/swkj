@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文档查看器</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-file-alt"></i> 文档查看器</h1>
+            <p>在线查看 PPT、Word 和 Excel 文档</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="filter-section">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">全部</button>
+                <button class="filter-btn" data-filter="ppt"><i class="fas fa-file-powerpoint"></i> PPT</button>
+                <button class="filter-btn" data-filter="word"><i class="fas fa-file-word"></i> Word</button>
+                <button class="filter-btn" data-filter="excel"><i class="fas fa-file-excel"></i> Excel</button>
+                <button class="filter-btn" data-filter="pdf"><i class="fas fa-file-pdf"></i> PDF</button>
+            </div>
+        </div>
+
+        <div class="documents-section">
+            <h2><i class="fas fa-folder-open"></i> 文档列表</h2>
+            <div id="documentsContainer" class="documents-grid">
+                <!-- 文档将通过 JavaScript 动态加载 -->
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </main>
+
+    <div id="viewerModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="viewerContent"></div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 文档查看器. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>

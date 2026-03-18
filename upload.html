@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件上传 - 文档查看器</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-cloud-upload-alt"></i> 文件上传</h1>
+            <p>上传 PPT、Word 和 Excel 文档</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="upload-section">
+            <div class="upload-box">
+                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                <p>拖拽文件到此处或点击上传</p>
+                <input type="file" id="fileInput" accept=".ppt,.pptx,.doc,.docx,.xls,.xlsx" multiple>
+                <button id="uploadBtn" class="btn-primary">选择文件</button>
+                <div id="uploadProgress" class="upload-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <p>正在上传... <span id="progressText">0%</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="upload-history">
+            <h2><i class="fas fa-history"></i> 最近上传</h2>
+            <div id="recentUploads" class="documents-grid">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+
+        <div class="back-to-home">
+            <a href="/" class="btn-primary">返回主页</a>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 文档查看器. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <script>
+        class UploadPage {
+            constructor() {
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.loadRecentUploads();
+            }
+
+            bindEvents() {
+                const uploadBtn = document.getElementById('uploadBtn');
+                const fileInput = document.getElementById('fileInput');
+                
+                uploadBtn.addEventListener('click', () => {
+                    fileInput.click();
+                });
+                
+                fileInput.addEventListener('change', (e) => {
+                    this.handleFileUpload(e.target.files);
+                });
+                
+                // 拖拽上传事件
+                const uploadBox = document.querySelector('.upload-box');
+                uploadBox.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadBox.style.borderColor = '#667eea';
+                    uploadBox.style.backgroundColor = '#f8f9ff';
+                });
+                
+                uploadBox.addEventListener('dragleave', () => {
+                    uploadBox.style.borderColor = '#ccc';
+                    uploadBox.style.backgroundColor = 'white';
+                });
+                
+                uploadBox.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadBox.style.borderColor = '#ccc';
+                    uploadBox.style.backgroundColor = 'white';
+                    this.handleFileUpload(e.dataTransfer.files);
+                });
+            }
+
+            async handleFileUpload(files) {
+                if (files.length === 0) return;
+                
+                const uploadProgress = document.getElementById('uploadProgress');
+                const progressText = document.getElementById('progressText');
+                const progressFill = document.querySelector('.progress-fill');
+                
+                uploadProgress.style.display = 'block';
+                
+                const formData = new FormData();
+                for (let i = 0; i < files.length; i++) {
+                    formData.append('documents', files[i]);
+                }
+                
+                try {
+                    // 创建 XMLHttpRequest 以监控上传进度
+                    const xhr = new XMLHttpRequest();
+                    
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable) {
+                            const percentComplete = Math.round((e.loaded / e.total) * 100);
+                            progressText.textContent = `${percentComplete}%`;
+                            progressFill.style.width = `${percentComplete}%`;
+                        }
+                    });
+                    
+                    xhr.open('POST', '/api/upload');
+                    
+                    xhr.onload = () => {
+                        if (xhr.status === 200) {
+                            // 上传成功
+                            uploadProgress.style.display = 'none';
+                            alert('文件上传成功！');
+                            this.loadRecentUploads();
+                        } else {
+                            // 上传失败
+                            uploadProgress.style.display = 'none';
+                            alert('文件上传失败，请重试');
+                        }
+                    };
+                    
+                    xhr.onerror = () => {
+                        uploadProgress.style.display = 'none';
+                        alert('文件上传失败，请重试');
+                    };
+                    
+                    xhr.send(formData);
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    uploadProgress.style.display = 'none';
+                    alert('文件上传失败，请重试');
+                }
+            }
+
+            async loadRecentUploads() {
+                try {
+                    const response = await fetch('/api/documents');
+                    if (!response.ok) throw new Error('Failed to load documents');
+                    
+                    const documents = await response.json();
+                    // 只显示最近5个上传的文件
+                    const recentDocs = documents.slice(0, 5);
+                    this.renderRecentUploads(recentDocs);
+                } catch (error) {
+                    console.error('Error loading documents:', error);
+                    document.getElementById('recentUploads').innerHTML = 
+                        '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>加载文档失败，请稍后重试</p></div>';
+                }
+            }
+
+            renderRecentUploads(documents) {
+                const container = document.getElementById('recentUploads');
+                
+                if (documents.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-file-alt"></i><p>暂无上传记录</p></div>';
+                    return;
+                }
+                
+                container.innerHTML = documents.map(doc => `
+                    <div class="document-card" data-id="${doc.id}">
+                        <div class="document-icon ${doc.type}">
+                            <i class="fas ${this.getDocumentIcon(doc.type)}"></i>
+                        </div>
+                        <div class="document-info">
+                            <h3 title="${doc.name}">${doc.name}</h3>
+                            <p>${this.formatFileSize(doc.size)}</p>
+                            <p>${this.formatDate(doc.uploadDate)}</p>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            getDocumentIcon(type) {
+                switch (type) {
+                    case 'ppt': return 'fa-file-powerpoint';
+                    case 'word': return 'fa-file-word';
+                    case 'excel': return 'fa-file-excel';
+                    default: return 'fa-file';
+                }
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            formatDate(dateString) {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('zh-CN');
+            }
+        }
+
+        // 初始化上传页面
+        document.addEventListener('DOMContentLoaded', () => {
+            new UploadPage();
+        });
+    </script>
+</body>
+</html>
